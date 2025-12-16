@@ -146,3 +146,54 @@ bool PDA::simulate(std::vector<std::string> inputTokens, bool debug) {
     std::cout << "\n[5] Result:\n[REJECT] String is invalid\n";
   return false;
 }
+
+void PDA::toDot(std::string filename) {
+  std::ofstream out(filename);
+  out << "digraph PDA {" << std::endl;
+  out << "  rankdir=LR;" << std::endl;
+  out << "  label=\"Pushdown Automaton\";" << std::endl;
+  out << "  node [shape=circle];" << std::endl;
+
+  // Start state pointer
+  out << "  start [shape=point];" << std::endl;
+  out << "  start -> " << startState << ";" << std::endl;
+
+  // Accessing private acceptStates is allowed here since we are in the class
+  for (int s : acceptStates) {
+    out << "  " << s << " [shape=doublecircle];" << std::endl;
+  }
+
+  // Transitions
+  // Map Key: {currentState, input, stackTop}
+  // Map Value: vector of {nextState, pushSymbols}
+  for (auto const &[key, results] : transitions) {
+    for (auto const &res : results) {
+      std::string label = "";
+
+      // Input
+      label += (key.input == EPSILON_STR) ? "ε" : key.input;
+      label += ", ";
+
+      // Pop
+      label += key.stackTop;
+      label += " -> ";
+
+      // Push
+      if (res.pushSymbols.empty()) {
+        label += "ε";
+      } else {
+        for (size_t i = 0; i < res.pushSymbols.size(); ++i) {
+          label += res.pushSymbols[i];
+          if (i < res.pushSymbols.size() - 1)
+            label += " ";
+        }
+      }
+
+      out << "  " << key.currentState << " -> " << res.nextState << " [label=\""
+          << label << "\"];" << std::endl;
+    }
+  }
+
+  out << "}" << std::endl;
+  out.close();
+}

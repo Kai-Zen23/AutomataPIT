@@ -60,7 +60,7 @@ def run_simulation(req: SimulationRequest):
 
         # Read generated graph files
         graphs = {}
-        for graph_type in ["nfa", "dfa", "min_dfa"]:
+        for graph_type in ["nfa", "dfa", "min_dfa", "pda"]:
             dot_path = f"{graph_type}.dot"
             # In Docker, files are in /app/, locally they are in root.
             # subprocess.run assumes cwd is root, so files should be there.

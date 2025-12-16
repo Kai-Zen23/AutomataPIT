@@ -12,6 +12,9 @@ CompilerFrontend::CompilerFrontend()
 {
   // Initialize Lexer
   CalculatorLanguage::configureLexer(lexer);
+
+  // Generate PDA visualization immediately after creation
+  syntaxValidator.toDot("pda.dot");
 }
 
 void CompilerFrontend::run(const std::string &sourceCode) {

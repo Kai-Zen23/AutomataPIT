@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-
 // Represents a transition key: (Current State, Input Symbol, Stack Top)
 struct PDATransitionKey {
   int currentState;
@@ -48,6 +47,9 @@ public:
 
   // Simulate the PDA on an input string (vector of tokens)
   bool simulate(std::vector<std::string> inputTokens, bool debug = false);
+
+  // Generate DOT file for visualization
+  void toDot(std::string filename);
 };
 
 #endif // PDA_H

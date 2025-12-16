@@ -213,6 +213,14 @@ function App() {
                     Min DFA
                   </button>
                 )}
+                {graphs.pda && (
+                  <button
+                    onClick={() => setViewMode('pda')}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'pda' ? 'bg-purple-800/50 text-purple-200 shadow-sm border border-purple-700/50' : 'text-slate-500 hover:text-purple-400'}`}
+                  >
+                    PDA Graph
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
