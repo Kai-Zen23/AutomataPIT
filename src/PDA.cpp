@@ -1,4 +1,5 @@
 #include "PDA.h"
+#include <fstream>
 
 // Special constant for Epsilon in string form
 const std::string EPSILON_STR = "EPSILON";
