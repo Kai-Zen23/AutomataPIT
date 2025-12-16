@@ -58,11 +58,22 @@ def run_simulation(req: SimulationRequest):
         if req.mode == 1 or req.mode == 3:
              parsed_data = parse_trace(result.stdout)
 
+        # Read generated graph files
+        graphs = {}
+        for graph_type in ["nfa", "dfa", "min_dfa"]:
+            dot_path = f"{graph_type}.dot"
+            # In Docker, files are in /app/, locally they are in root.
+            # subprocess.run assumes cwd is root, so files should be there.
+            if os.path.exists(dot_path):
+                with open(dot_path, "r") as f:
+                    graphs[graph_type] = f.read()
+
         return {
             "stdout": result.stdout,
             "stderr": result.stderr,
             "exit_code": result.returncode,
-            "trace": parsed_data
+            "trace": parsed_data,
+            "graphs": graphs
         }
     except subprocess.CalledProcessError as e:
         return {

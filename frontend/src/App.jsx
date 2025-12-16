@@ -2,12 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+import GraphVisualizer from './components/GraphVisualizer';
+
 function App() {
   const [mode, setMode] = useState(3); // 1: Regex, 3: Calculator
   const [input, setInput] = useState('x = 5 + 3');
   const [testString, setTestString] = useState('aabb'); // Default test string
   const [output, setOutput] = useState('');
   const [trace, setTrace] = useState([]);
+  const [graphs, setGraphs] = useState({}); // { nfa: "...", dfa: "...", min_dfa: "..." }
+  const [viewMode, setViewMode] = useState('trace'); // 'trace' | 'nfa' | 'dfa' | 'min_dfa'
   const [step, setStep] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
@@ -30,9 +34,27 @@ function App() {
     return () => clearInterval(playRef.current);
   }, [isPlaying, trace.length, speed]);
 
+  // Parse active state from current trace step
+  const getActiveStateId = () => {
+    if (step < 0 || !trace[step]) return null;
+    const currentAction = trace[step];
+    // Parser/Backend returns trace objects.
+    // For Regex (DFA), we need to extract "qX" from the action or stack info.
+    // Our backend parser.py might need to be checked, but usually returns 'stack_content' like "[q0]"
+
+    const stackContent = currentAction.data?.stack_content || "";
+    // content is like "[q0]"
+    const match = stackContent.match(/q(\d+)/);
+    if (match) {
+      return match[1];
+    }
+    return null;
+  };
+
   const handleSimulate = async () => {
     setLoading(true);
     setTrace([]);
+    setGraphs({});
     setStep(-1);
     setIsPlaying(false);
     setOutput('');
@@ -48,11 +70,15 @@ function App() {
       if (data.error) {
         setOutput(`Error: ${data.error}\n${data.stderr || ''}`);
       } else {
-        setOutput(data.stdout);
+        setOutput(data.stdout + (data.stderr ? `\nSTDERR:\n${data.stderr}` : ''));
         if (data.trace) {
           setTrace(data.trace);
-          // Auto-switch to visualizer if traces exist
           if (data.trace.length > 0) setStep(-1);
+        }
+        if (data.graphs) {
+          setGraphs(data.graphs);
+          // Auto switch to DFA view if available
+          if (data.graphs.dfa) setViewMode('dfa');
         }
       }
     } catch (err) {
@@ -80,7 +106,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans selection:bg-sky-500/30">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
 
         {/* Header */}
         <header className="flex items-center justify-between border-b border-slate-800 pb-6">
@@ -143,55 +169,96 @@ function App() {
                 disabled={loading}
                 className="bg-sky-600 hover:bg-sky-500 text-white px-8 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-900/20 flex items-center gap-2 h-[54px]"
               >
-                {loading ? 'Compiling...' : 'Generate Trace'}
+                {loading ? 'Compiling...' : 'Visualize'}
               </button>
             </div>
           </div>
         </section>
 
         {/* Main Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[700px]">
 
-          {/* Left: Visualization */}
-          <section className="bg-slate-900 rounded-xl border border-slate-800 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/80">
-              <h2 className="font-semibold text-slate-200">Simulation View</h2>
+          {/* Left: Visualization (Graph or Trace) */}
+          <section className="bg-slate-900 rounded-xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/80">
+              {/* View Tabs */}
+              <div className="flex space-x-1 bg-slate-950/50 p-1 rounded-lg">
+                <button
+                  onClick={() => setViewMode('trace')}
+                  className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'trace' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  Trace Table
+                </button>
+                {graphs.nfa && (
+                  <button
+                    onClick={() => setViewMode('nfa')}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'nfa' ? 'bg-sky-800/50 text-sky-200 shadow-sm border border-sky-700/50' : 'text-slate-500 hover:text-sky-400'}`}
+                  >
+                    NFA Graph
+                  </button>
+                )}
+                {graphs.dfa && (
+                  <button
+                    onClick={() => setViewMode('dfa')}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'dfa' ? 'bg-emerald-800/50 text-emerald-200 shadow-sm border border-emerald-700/50' : 'text-slate-500 hover:text-emerald-400'}`}
+                  >
+                    DFA Graph
+                  </button>
+                )}
+                {graphs.min_dfa && (
+                  <button
+                    onClick={() => setViewMode('min_dfa')}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'min_dfa' ? 'bg-indigo-800/50 text-indigo-200 shadow-sm border border-indigo-700/50' : 'text-slate-500 hover:text-indigo-400'}`}
+                  >
+                    Min DFA
+                  </button>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-slate-800 rounded text-xs font-mono text-sky-400">
+                <div className="px-3 py-1 bg-slate-800 rounded text-xs font-mono text-sky-400 border border-slate-700">
                   Step: {step + 1} / {trace.length}
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 space-y-4 bg-[#0B0F19]">
-              {/* Stack Table */}
-              {trace.length > 0 ? (
-                <div className="space-y-2">
-                  {getVisibleStack().map((t, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors group animate-in fade-in slide-in-from-left-4 duration-300">
-                      <div className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-xs font-mono text-slate-400 group-hover:bg-sky-900/30 group-hover:text-sky-400">
-                        {t.data.step}
-                      </div>
-                      <div className="flex-1 font-mono text-sm">
-                        <div className="flex justify-between text-slate-400 text-xs mb-1">
-                          <span>Idx: {t.data.input_index}</span>
-                          <span className="text-emerald-400">{t.data.action}</span>
+            <div className="flex-1 overflow-hidden relative bg-[#0B0F19]">
+              {viewMode === 'trace' ? (
+                <div className="h-full overflow-auto p-4 space-y-2">
+                  {trace.length > 0 ? (
+                    <>
+                      {getVisibleStack().map((t, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors group animate-in fade-in slide-in-from-left-4 duration-300">
+                          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-xs font-mono text-slate-400 group-hover:bg-sky-900/30 group-hover:text-sky-400">
+                            {t.data.step}
+                          </div>
+                          <div className="flex-1 font-mono text-sm">
+                            <div className="flex justify-between text-slate-400 text-xs mb-1">
+                              <span>Idx: {t.data.input_index}</span>
+                              <span className="text-emerald-400">{t.data.action}</span>
+                            </div>
+                            <div className="text-slate-200 bg-slate-950 px-2 py-1 rounded border border-slate-800/50">
+                              {t.data.stack_content}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-slate-200 bg-slate-950 px-2 py-1 rounded border border-slate-800/50">
-                          {t.data.stack_content}
-                        </div>
+                      ))}
+                      <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
+                    </>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl">
+                        ⚡
                       </div>
+                      <p>Run a simulation to see the trace.</p>
                     </div>
-                  ))}
-                  <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
+                  )}
                 </div>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl">
-                    ⚡
-                  </div>
-                  <p>Run a simulation to see the stack trace here.</p>
-                </div>
+                <GraphVisualizer
+                  dotString={graphs[viewMode]}
+                  activeStateId={getActiveStateId()}
+                />
               )}
             </div>
 
@@ -230,7 +297,7 @@ function App() {
                     max="2000"
                     step="100"
                     value={speed}
-                    onChange={(e) => setSpeed(Number(e.target.value))} // Reversed logic visual fix needed usually, low is fast
+                    onChange={(e) => setSpeed(Number(e.target.value))}
                     className="w-32 accent-sky-500"
                   />
                 </div>
