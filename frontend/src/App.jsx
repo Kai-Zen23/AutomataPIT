@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 function App() {
   const [mode, setMode] = useState(3); // 1: Regex, 3: Calculator
   const [input, setInput] = useState('x = 5 + 3');
+  const [testString, setTestString] = useState('aabb'); // Default test string
   const [output, setOutput] = useState('');
   const [trace, setTrace] = useState([]);
   const [step, setStep] = useState(-1);
@@ -40,7 +41,7 @@ function App() {
       const res = await fetch(`${API_URL}/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, input_text: input }),
+        body: JSON.stringify({ mode, input_text: input, test_string: testString }),
       });
       const data = await res.json();
 
@@ -106,24 +107,45 @@ function App() {
         </header>
 
         {/* Input Area */}
-        <section className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 backdrop-blur-sm">
-          <label className="block text-sm font-medium text-slate-400 mb-2">Input Expression</label>
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 font-mono text-lg focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder-slate-600"
-              placeholder={mode === 1 ? "[a-z]+" : "x = 5 + 3"}
-              onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
-            />
-            <button
-              onClick={handleSimulate}
-              disabled={loading}
-              className="bg-sky-600 hover:bg-sky-500 text-white px-8 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-900/20 flex items-center gap-2"
-            >
-              {loading ? 'Compiling...' : 'Generate Trace'}
-            </button>
+        <section className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 backdrop-blur-sm space-y-4">
+
+          <div className="flex gap-4 items-start">
+            <div className="flex-1 space-y-1">
+              <label className="block text-sm font-medium text-slate-400">
+                {mode === 1 ? 'Regex Pattern' : 'Expression'}
+              </label>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 font-mono text-lg focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder-slate-600"
+                placeholder={mode === 1 ? "(a|b)abb" : "x = 5 + 3"}
+              />
+            </div>
+
+            {mode === 1 && (
+              <div className="flex-1 space-y-1">
+                <label className="block text-sm font-medium text-slate-400">Test String</label>
+                <input
+                  type="text"
+                  value={testString}
+                  onChange={(e) => setTestString(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 font-mono text-lg focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder-slate-600"
+                  placeholder="aabb"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
+                />
+              </div>
+            )}
+
+            <div className="flex items-end self-end">
+              <button
+                onClick={handleSimulate}
+                disabled={loading}
+                className="bg-sky-600 hover:bg-sky-500 text-white px-8 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-900/20 flex items-center gap-2 h-[54px]"
+              >
+                {loading ? 'Compiling...' : 'Generate Trace'}
+              </button>
+            </div>
           </div>
         </section>
 

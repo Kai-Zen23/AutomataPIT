@@ -62,13 +62,18 @@ int main() {
       std::cout << "[5] NFA Simulation (Subset Construction):\n";
       std::cout << "  Testing strings against NFA...\n\n";
 
-      std::vector<std::string> testStrings = {"myVar", "_test", "123invalid",
-                                              "a", "123"};
+      std::string testString;
+      if (std::getline(std::cin, testString) && !testString.empty()) {
+        // Use user provided test string
+        if (testString.back() == '\r')
+          testString.pop_back(); // Handle Windows line endings
+      } else {
+        testString = "myVar"; // Fallback
+      }
 
-      // Run detailed trace for the first test string (for Visualizer)
-      std::cout << "\n[Detailed Animation Trace for '" << testStrings[0]
-                << "']\n";
-      dfa.simulate(testStrings[0], true);
+      // Run detailed trace for the test string
+      std::cout << "\n[Detailed Animation Trace for '" << testString << "']\n";
+      dfa.simulate(testString, true);
       std::cout << "[End Trace]\n\n";
 
       int testId = 1;

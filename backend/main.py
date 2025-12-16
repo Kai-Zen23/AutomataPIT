@@ -19,6 +19,7 @@ app.add_middleware(
 class SimulationRequest(BaseModel):
     mode: int
     input_text: str
+    test_string: str = "myVar" # Default for backward compatibility
 
 @app.get("/")
 def read_root():
@@ -38,7 +39,11 @@ def run_simulation(req: SimulationRequest):
         # For now return error but maybe detailed
         return {"error": "Compiler executable not found. Please compile src/ first."}
         
-    input_str = f"{req.mode}\n{req.input_text}\n"
+    # Input format:
+    # Line 1: Mode
+    # Line 2: Regex / Input
+    # Line 3: Test String
+    input_str = f"{req.mode}\n{req.input_text}\n{req.test_string}\n"
     
     try:
         result = subprocess.run(
