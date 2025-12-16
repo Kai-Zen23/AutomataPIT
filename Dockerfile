@@ -20,7 +20,7 @@ COPY . .
 
 # Compile the C++ engine
 # Source is in /app/src, output to /app/compiler_frontend
-RUN g++ -std=c++14 -o /app/compiler_frontend src/*.cpp
+RUN g++ -std=c++17 -o /app/compiler_frontend src/*.cpp
 
 # Expose the API port
 EXPOSE 8000

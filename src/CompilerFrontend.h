@@ -16,7 +16,7 @@ public:
 
 private:
   Lexer lexer;
-  PDASyntaxValidator syntaxValidator; // Using PDA as the validator
+  PDA syntaxValidator; // Using PDA as the validator
 
   void printLexicalAnalysisResult(const std::vector<Token> &tokens);
   void printSyntaxAnalysisResult(bool isValid);
