@@ -41,6 +41,7 @@ public:
   static DFA fromNFA(NFA nfa);
 
   void minimize();
+  bool simulate(std::string input, bool debug = false);
   void print();
   void toDot(std::string filename, std::string label);
   void destroy() {

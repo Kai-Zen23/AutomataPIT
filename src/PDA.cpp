@@ -34,22 +34,29 @@ bool PDA::simulate(std::vector<std::string> inputTokens, bool debug) {
     std::cout << std::endl;
   }
 
+  int stepCount = 0;
+
   while (!worklist.empty()) {
     SimulationState current = worklist.back();
     worklist.pop_back();
 
     if (debug) {
-      std::cout << "State: " << current.currentState
-                << ", InputIdx: " << current.inputIndex << ", Stack: ";
-      for (const auto &c : current.stack)
-        std::cout << c << " ";
-      std::cout << std::endl;
+      stepCount++;
+      std::string inputChar = (current.inputIndex < inputTokens.size())
+                                  ? inputTokens[current.inputIndex]
+                                  : "EPSILON";
+      std::string pos = std::to_string(current.inputIndex);
+      std::cout << "Step " << stepCount << ": Read '" << inputChar
+                << "' at position " << pos << "\n";
     }
 
     if (current.inputIndex == inputTokens.size() &&
         acceptStates.count(current.currentState)) {
-      if (debug)
-        std::cout << "ACCEPTED!" << std::endl;
+      if (debug) {
+        std::cout << "  Action: ACCEPT\n";
+        std::cout << "\n[5] Result:\n[ACCEPT] String is valid context-free "
+                     "language string\n";
+      }
       return true;
     }
 
@@ -71,6 +78,25 @@ bool PDA::simulate(std::vector<std::string> inputTokens, bool debug) {
           nextState.currentState = res.nextState;
           nextState.inputIndex++;
           nextState.stack.pop_back(); // Pop
+
+          std::string actionDesc = "POP '" + stackTop + "'";
+          if (!res.pushSymbols.empty()) {
+            actionDesc = "PUSH ";
+            for (const auto &s : res.pushSymbols)
+              actionDesc += "'" + s + "' ";
+            actionDesc += "(replaced '" + stackTop + "')";
+          }
+
+          if (debug) {
+            std::cout << "  Action: " << actionDesc << "\n";
+            std::cout << "  Stack: [";
+            for (size_t i = 0; i < nextState.stack.size(); ++i) {
+              std::cout << nextState.stack[i]
+                        << (i < nextState.stack.size() - 1 ? ", " : "");
+            }
+            std::cout << "]\n\n";
+          }
+
           // Push new symbols (reverse order)
           for (auto it = res.pushSymbols.rbegin(); it != res.pushSymbols.rend();
                ++it) {
@@ -89,6 +115,24 @@ bool PDA::simulate(std::vector<std::string> inputTokens, bool debug) {
         nextState.currentState = res.nextState;
         // Input index doesn't change
         nextState.stack.pop_back();
+
+        std::string actionDesc = "POP '" + stackTop + "'";
+        if (!res.pushSymbols.empty()) {
+          actionDesc = "EXPAND '" + stackTop + "' -> ";
+          for (const auto &s : res.pushSymbols)
+            actionDesc += s + " ";
+        }
+
+        if (debug) {
+          std::cout << "  Action: " << actionDesc << "\n";
+          std::cout << "  Stack: [";
+          for (size_t i = 0; i < nextState.stack.size(); ++i) {
+            std::cout << nextState.stack[i]
+                      << (i < nextState.stack.size() - 1 ? ", " : "");
+          }
+          std::cout << "]\n\n";
+        }
+
         for (auto it = res.pushSymbols.rbegin(); it != res.pushSymbols.rend();
              ++it) {
           nextState.stack.push_back(*it);
@@ -99,6 +143,6 @@ bool PDA::simulate(std::vector<std::string> inputTokens, bool debug) {
   }
 
   if (debug)
-    std::cout << "REJECTED" << std::endl;
+    std::cout << "\n[5] Result:\n[REJECT] String is invalid\n";
   return false;
 }

@@ -4,7 +4,6 @@
 #include <iostream>
 #include <queue>
 
-
 std::set<State *> DFA::epsilonClosure(std::set<State *> states) {
   std::set<State *> closure = states;
   std::stack<State *> stack;
@@ -115,6 +114,56 @@ void DFA::print() {
       std::cout << "  " << s->id << " [ACCEPT]" << std::endl;
     }
   }
+}
+
+bool DFA::simulate(std::string input, bool debug) {
+  State *current = startState;
+  int step = 0;
+
+  if (debug) {
+    std::cout << "\n[Trace] DFA Simulation Trace:\n";
+  }
+
+  for (size_t i = 0; i < input.length(); ++i) {
+    char c = input[i];
+
+    // Visualizer Format: Step N: Read 'c' at position I
+    if (debug) {
+      step++;
+      std::cout << "Step " << step << ": Read '" << c << "' at position " << i
+                << "\n";
+    }
+
+    auto range = current->transitions.equal_range(c);
+    if (range.first == range.second) {
+      if (debug)
+        std::cout << "Action: No Transition (REJECT)\nStack: [q" << current->id
+                  << "]\n";
+      return false;
+    }
+
+    State *nextState = range.first->second;
+
+    // Visualizer Format reuse:
+    // Action -> "Transition qX -> qY"
+    // Stack -> "[qY]" (Current State)
+    if (debug) {
+      std::cout << "Action: Transition q" << current->id << " -> q"
+                << nextState->id << "\n";
+      std::cout << "Stack: [q" << nextState->id << "]\n";
+    }
+
+    current = nextState;
+  }
+
+  bool result = current->isAccepting;
+  if (debug) {
+    std::cout << "Step " << step + 1 << ": End of Input\n";
+    std::cout << "Action: " << (result ? "ACCEPT" : "REJECT") << "\n";
+    std::cout << "Stack: [q" << current->id << "]\n";
+  }
+
+  return result;
 }
 
 void DFA::minimize() {

@@ -165,9 +165,15 @@ NFA RegexParser::parse(std::string regex) {
   std::string preprocessed = preprocessRegex(regex);
   std::string postfix = toPostfix(preprocessed);
 
-  // Debug print
-  std::cout << "Regex: " << regex << " -> Pre: " << preprocessed
-            << " -> Post: " << postfix << std::endl;
+  std::cout << "\n=== LEXICAL ANALYSIS: Regular Expression -> NFA ===\n\n";
+  std::cout << "[1] Input Pattern:\n  " << regex << "\n\n";
+
+  std::cout << "[2] Character Class Expansion & Preprocessing:\n  "
+            << preprocessed << "\n";
+  std::cout << "  (Character classes expanded to unions)\n\n";
+
+  std::cout << "[3] Postfix Notation (RPN):\n  " << postfix << "\n";
+  std::cout << "  (Ready for Thompson's NFA construction)\n\n";
 
   std::stack<NFA> nfaStack;
 

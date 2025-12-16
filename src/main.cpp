@@ -1,241 +1,102 @@
-#include "CompilerException.h"
+#include "CompilerFrontend.h"
 #include "DFA.h"
-#include "Lexer.h"
-#include "PDA.h"
 #include "RegexParser.h"
 #include <iostream>
-
-// Special constant for Epsilon in string form
-const std::string EPSILON_STR = "EPSILON";
-
-void testCalculator() {
-  std::cout << "Initializing Calculator Lexer..." << std::endl;
-  RegexParser parser;
-  Lexer lexer;
-
-  try {
-    // Numbers
-    NFA nfaNum = parser.parse("[0-9]+(\\.[0-9]+)?");
-    DFA dfaNum = DFA::fromNFA(std::move(nfaNum));
-    dfaNum.minimize();
-    lexer.addRule("NUMBER", std::move(dfaNum));
-
-    // Identifiers
-    NFA nfaId = parser.parse("[a-zA-Z_][a-zA-Z0-9_]*");
-    DFA dfaId = DFA::fromNFA(std::move(nfaId));
-    dfaId.minimize();
-    lexer.addRule("IDENTIFIER", std::move(dfaId));
-
-    // Operators (Split for precedence)
-    NFA nfaPlus = parser.parse("\\+");
-    DFA dfaPlus = DFA::fromNFA(std::move(nfaPlus));
-    dfaPlus.minimize();
-    lexer.addRule("PLUS", std::move(dfaPlus));
-
-    NFA nfaMinus = parser.parse("\\-");
-    DFA dfaMinus = DFA::fromNFA(std::move(nfaMinus));
-    dfaMinus.minimize();
-    lexer.addRule("MINUS", std::move(dfaMinus));
-
-    NFA nfaMul = parser.parse("\\*");
-    DFA dfaMul = DFA::fromNFA(std::move(nfaMul));
-    dfaMul.minimize();
-    lexer.addRule("MUL", std::move(dfaMul));
-
-    NFA nfaDiv = parser.parse("/");
-    DFA dfaDiv = DFA::fromNFA(std::move(nfaDiv));
-    dfaDiv.minimize();
-    lexer.addRule("DIV", std::move(dfaDiv));
-
-    // Parentheses
-    NFA nfaLParen = parser.parse("\\(");
-    DFA dfaLParen = DFA::fromNFA(std::move(nfaLParen));
-    dfaLParen.minimize();
-    lexer.addRule("LPAREN", std::move(dfaLParen));
-
-    NFA nfaRParen = parser.parse("\\)");
-    DFA dfaRParen = DFA::fromNFA(std::move(nfaRParen));
-    dfaRParen.minimize();
-    lexer.addRule("RPAREN", std::move(dfaRParen));
-
-    NFA nfaEq = parser.parse("=");
-    DFA dfaEq = DFA::fromNFA(std::move(nfaEq));
-    dfaEq.minimize();
-    lexer.addRule("EQUALS", std::move(dfaEq));
-
-  } catch (const std::exception &e) {
-    std::cerr << "Lexer Setup Error: " << e.what() << std::endl;
-    return;
-  }
-
-  // PDA Construction
-  // S -> IDENTIFIER = E | E
-  // E -> T E'
-  // E' -> + T E' | - T E' | epsilon
-  // T -> F T'
-  // T' -> * F T' | / F T' | epsilon
-  // F -> ( E ) | NUMBER | IDENTIFIER
-
-  PDA pdaCalc(0, "Z");
-  pdaCalc.addAcceptState(1);
-
-  // Start: Push S
-  pdaCalc.addTransition(0, EPSILON_STR, "Z", 0, {"S", "Z"});
-
-  // S -> IDENTIFIER = E
-  pdaCalc.addTransition(0, EPSILON_STR, "S", 0, {"IDENTIFIER", "EQUALS", "E"});
-  // S -> E
-  pdaCalc.addTransition(0, EPSILON_STR, "S", 0, {"E"});
-
-  // E -> T E'
-  pdaCalc.addTransition(0, EPSILON_STR, "E", 0, {"T", "E'"});
-
-  // E' -> + T E'
-  pdaCalc.addTransition(0, EPSILON_STR, "E'", 0, {"PLUS", "T", "E'"});
-  // E' -> - T E'
-  pdaCalc.addTransition(0, EPSILON_STR, "E'", 0, {"MINUS", "T", "E'"});
-  // E' -> epsilon
-  pdaCalc.addTransition(0, EPSILON_STR, "E'", 0, {});
-
-  // T -> F T'
-  pdaCalc.addTransition(0, EPSILON_STR, "T", 0, {"F", "T'"});
-
-  // T' -> * F T'
-  pdaCalc.addTransition(0, EPSILON_STR, "T'", 0, {"MUL", "F", "T'"});
-  // T' -> / F T'
-  pdaCalc.addTransition(0, EPSILON_STR, "T'", 0, {"DIV", "F", "T'"});
-  // T' -> epsilon
-  pdaCalc.addTransition(0, EPSILON_STR, "T'", 0, {});
-
-  // F -> ( E )
-  pdaCalc.addTransition(0, EPSILON_STR, "F", 0, {"LPAREN", "E", "RPAREN"});
-  // F -> NUMBER
-  pdaCalc.addTransition(0, EPSILON_STR, "F", 0, {"NUMBER"});
-  // F -> IDENTIFIER
-  pdaCalc.addTransition(0, EPSILON_STR, "F", 0, {"IDENTIFIER"});
-
-  // Terminals (Match input token type with stack symbol)
-  pdaCalc.addTransition(0, "PLUS", "PLUS", 0, {});
-  pdaCalc.addTransition(0, "MINUS", "MINUS", 0, {});
-  pdaCalc.addTransition(0, "MUL", "MUL", 0, {});
-  pdaCalc.addTransition(0, "DIV", "DIV", 0, {});
-  pdaCalc.addTransition(0, "LPAREN", "LPAREN", 0, {});
-  pdaCalc.addTransition(0, "RPAREN", "RPAREN", 0, {});
-  pdaCalc.addTransition(0, "NUMBER", "NUMBER", 0, {});
-  pdaCalc.addTransition(0, "IDENTIFIER", "IDENTIFIER", 0, {});
-  pdaCalc.addTransition(0, "EQUALS", "EQUALS", 0, {});
-
-  // Finish
-  pdaCalc.addTransition(0, EPSILON_STR, "Z", 1, {"Z"});
-
-  std::string input;
-  std::cout << "Enter Calculator String (e.g., x = 5 + 3 * y): ";
-  if (std::getline(std::cin, input)) {
-    if (input.empty())
-      return;
-
-    try {
-      std::cout << "Tokenizing..." << std::endl;
-      std::vector<Token> tokens = lexer.tokenize(input);
-
-      std::vector<std::string> tokenTypes;
-      for (const auto &t : tokens) {
-        std::cout << "Token: " << t.type << " (" << t.value << ")" << std::endl;
-        tokenTypes.push_back(t.type);
-      }
-
-      std::cout << "Parsing..." << std::endl;
-      bool result = pdaCalc.simulate(tokenTypes, true);
-      if (result)
-        std::cout << "Syntax: Valid" << std::endl;
-      else
-        std::cout << "Syntax: Invalid" << std::endl;
-    } catch (const CompilerException &e) {
-      std::cerr << "Error: " << e.what() << std::endl;
-    } catch (const std::exception &e) {
-      std::cerr << "Unexpected Error: " << e.what() << std::endl;
-    }
-  }
-}
-
-void testPDA() {
-  // Balanced Parentheses PDA
-  PDA pda(0, "Z");
-  pda.addAcceptState(1);
-
-  // Push X on '('
-  pda.addTransition(0, "(", "Z", 0, {"X", "Z"});
-  pda.addTransition(0, "(", "X", 0, {"X", "X"});
-
-  // Pop X on ')'
-  pda.addTransition(0, ")", "X", 0, {});
-
-  // Accept if stack is Z (marker)
-  pda.addTransition(0, EPSILON_STR, "Z", 1, {"Z"});
-
-  std::string input;
-  std::cout << "Enter string to check (e.g., (())): ";
-  if (std::getline(std::cin, input)) {
-    // Tokenize char by char for this simple test
-    std::vector<std::string> tokens;
-    for (char c : input)
-      tokens.push_back(std::string(1, c));
-
-    bool result = pda.simulate(tokens, true);
-    if (result)
-      std::cout << "Result: ACCEPTED" << std::endl;
-    else
-      std::cout << "Result: REJECTED" << std::endl;
-  }
-}
+#include <string>
 
 int main() {
-  std::string mode;
-  std::cout << "Select Mode (1: Regex/DFA, 2: PDA Test, 3: Calculator): ";
-  if (!std::getline(std::cin, mode))
-    return 0;
-
-  if (mode == "2") {
-    testPDA();
-    return 0;
-  }
-  if (mode == "3") {
-    testCalculator();
-    return 0;
+  std::string modeLine;
+  if (!std::getline(std::cin, modeLine) || modeLine.empty()) {
+    std::cerr << "Error: No mode provided." << std::endl;
+    return 1;
   }
 
-  RegexParser parser;
-  std::string regex;
+  int mode = 0;
+  try {
+    mode = std::stoi(modeLine);
+  } catch (...) {
+    // Fallback if not an integer (e.g. running manually without mode)
+    // Check if it's the calculator loop request
+    mode = 3;
+  }
 
-  std::cout << "Enter Regex: ";
-  if (std::getline(std::cin, regex)) {
-    if (regex.empty())
-      return 0;
+  std::string inputLine;
+  if (!std::getline(std::cin, inputLine)) {
+    std::cerr << "Error: No input provided." << std::endl;
+    return 1;
+  }
+
+  if (mode == 1) {
+    // Regex / NFA / DFA
+    std::cout << "Mode: Regex Analysis" << std::endl;
+    std::cout << "Regex: " << inputLine << std::endl;
 
     try {
-      std::cout << "Parsing regex: " << regex << std::endl;
-      NFA nfa = parser.parse(regex);
+      RegexParser parser;
+      NFA nfa = parser.parse(inputLine);
 
-      std::cout << "NFA Constructed:" << std::endl;
-      nfa.print();
-      nfa.toDot("nfa.dot", "NFA: " + regex);
+      std::cout << "[4] Thompson's NFA Construction:\n";
+      std::cout << "  States created: " << nfa.allStates.size() << "\n";
+      std::cout << "  Start state: q" << nfa.startState->id << "\n";
+      std::cout << "  Final states: q" << nfa.acceptState->id << "\n\n";
 
-      std::cout << "\nConverting to DFA..." << std::endl;
+      std::cout << "  Key Transitions:\n";
+      int count = 0;
+      for (auto const &[key, val] : nfa.startState->transitions) {
+        std::string label = (key == EPSILON) ? "e" : std::string(1, key);
+        std::cout << "    q" << nfa.startState->id << " --[" << label
+                  << "]--> q" << val->id << "\n";
+        if (++count >= 5)
+          break;
+      }
+      std::cout << "\n";
+
+      nfa.toDot("nfa.dot", "NFA for " + inputLine);
+
       DFA dfa = DFA::fromNFA(std::move(nfa));
-      dfa.print();
-      dfa.toDot("dfa.dot", "DFA: " + regex);
+      dfa.toDot("dfa.dot", "DFA for " + inputLine);
 
-      std::cout << "\nMinimizing DFA..." << std::endl;
       dfa.minimize();
-      dfa.print();
-      dfa.toDot("min_dfa.dot", "Minimized DFA: " + regex);
+      dfa.toDot("min_dfa.dot", "Minimized DFA for " + inputLine);
 
-      // Destructors handle cleanup automatically
-    } catch (const CompilerException &e) {
-      std::cerr << "Error: " << e.what() << std::endl;
+      std::cout << "[5] NFA Simulation (Subset Construction):\n";
+      std::cout << "  Testing strings against NFA...\n\n";
+
+      std::vector<std::string> testStrings = {"myVar", "_test", "123invalid",
+                                              "a", "123"};
+
+      // Run detailed trace for the first test string (for Visualizer)
+      std::cout << "\n[Detailed Animation Trace for '" << testStrings[0]
+                << "']\n";
+      dfa.simulate(testStrings[0], true);
+      std::cout << "[End Trace]\n\n";
+
+      int testId = 1;
+      for (const auto &s : testStrings) {
+        bool result = dfa.simulate(s);
+        std::cout << "  Test " << testId++ << ": \"" << s << "\"\n";
+        std::cout << "    Result: "
+                  << (result ? "[MATCH] Accepted" : "[NO MATCH] Rejected")
+                  << "\n";
+      }
+
+      std::cout << "\nGraphs generated: nfa.dot, dfa.dot, min_dfa.dot\n";
+      std::cout << "\n--- Summary ---\n";
+      std::cout << "Regular Language: Recognized by finite automaton\n";
+      std::cout << "Equivalence: Regex == NFA == DFA == Regular Grammar\n";
+
     } catch (const std::exception &e) {
-      std::cerr << "Unexpected Error: " << e.what() << std::endl;
+      std::cerr << "Regex Error: " << e.what() << std::endl;
     }
+
+  } else if (mode == 3) {
+    // Calculator PDA
+    // std::cout << "Mode: Calculator Simulation" << std::endl;
+    CompilerFrontend compiler;
+    compiler.run(inputLine);
+  } else {
+    std::cerr << "Unknown Mode: " << mode << std::endl;
   }
+
   return 0;
 }
