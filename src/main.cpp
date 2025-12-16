@@ -76,15 +76,6 @@ int main() {
       dfa.simulate(testString, true);
       std::cout << "[End Trace]\n\n";
 
-      int testId = 1;
-      for (const auto &s : testStrings) {
-        bool result = dfa.simulate(s);
-        std::cout << "  Test " << testId++ << ": \"" << s << "\"\n";
-        std::cout << "    Result: "
-                  << (result ? "[MATCH] Accepted" : "[NO MATCH] Rejected")
-                  << "\n";
-      }
-
       std::cout << "\nGraphs generated: nfa.dot, dfa.dot, min_dfa.dot\n";
       std::cout << "\n--- Summary ---\n";
       std::cout << "Regular Language: Recognized by finite automaton\n";
