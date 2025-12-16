@@ -16,7 +16,24 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
   const playRef = useRef(null);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/history`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch history", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   // Auto-play loop
   useEffect(() => {
@@ -79,6 +96,7 @@ function App() {
           setGraphs(data.graphs);
           // Auto switch to DFA view if available
           if (data.graphs.dfa) setViewMode('dfa');
+          fetchHistory(); // Refresh history list
         }
       }
     } catch (err) {
@@ -313,7 +331,7 @@ function App() {
             </div>
           </section>
 
-          {/* Right: Console Output */}
+          {/* Center: Console Output */}
           <section className="bg-slate-900 rounded-xl border border-slate-800 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-800 bg-slate-900/80">
               <h2 className="font-semibold text-slate-200">Execution Log</h2>
@@ -326,6 +344,56 @@ function App() {
           </section>
 
         </div>
+
+        {/* Bottom: Recent History */}
+        <section className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Recent History
+            </h2>
+            <button onClick={fetchHistory} className="text-sm text-slate-400 hover:text-white underline">
+              Refresh
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {history.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => {
+                  setMode(item.mode);
+                  setInput(item.input_text);
+                  setTestString(item.test_string || '');
+                  if (item.result_output) setOutput(item.result_output);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="bg-slate-950 border border-slate-800 p-4 rounded-lg cursor-pointer hover:bg-slate-800 transition-all group"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <span className={`text-xs px-2 py-0.5 rounded font-mono ${item.mode === 1 ? 'bg-sky-900/50 text-sky-300' : 'bg-indigo-900/50 text-indigo-300'}`}>
+                    {item.mode === 1 ? 'REGEX' : 'CALC'}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {new Date(item.created_at).toLocaleTimeString()}
+                  </span>
+                </div>
+                <p className="font-mono text-sm text-slate-300 truncate mb-1" title={item.input_text}>
+                  {item.input_text}
+                </p>
+                {item.test_string && (
+                  <p className="font-mono text-xs text-slate-500 truncate">
+                    Test: {item.test_string}
+                  </p>
+                )}
+              </div>
+            ))}
+            {history.length === 0 && (
+              <div className="col-span-full text-center py-8 text-slate-500 italic">
+                No history yet. Run a simulation to see it here.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
