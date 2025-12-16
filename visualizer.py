@@ -3,19 +3,20 @@ from tkinter import ttk, messagebox, PhotoImage
 import subprocess
 import os
 import sys
+import re
 
 class AutomataVisualizer:
     def __init__(self, root):
         self.root = root
         self.root.title("Automata Compiler Visualizer")
-        self.root.geometry("1000x700")
+        self.root.geometry("1100x750")
 
         # Config
-        self.exe_path = "main.exe"
+        self.exe_path = "compiler_frontend.exe"
         if not os.path.exists(self.exe_path):
              # Try checking if it's in src/ (unlikely given build command but safe to check)
-             if os.path.exists(os.path.join("src", "main.exe")):
-                 self.exe_path = os.path.join("src", "main.exe")
+             if os.path.exists(os.path.join("src", "compiler_frontend.exe")):
+                 self.exe_path = os.path.join("src", "compiler_frontend.exe")
 
         # Styles
         style = ttk.Style()
@@ -34,24 +35,24 @@ class AutomataVisualizer:
         mode_frame.pack(fill=tk.X, pady=5)
         
         ttk.Label(mode_frame, text="Mode: ").pack(side=tk.LEFT)
-        self.mode_var = tk.IntVar(value=1)
+        self.mode_var = tk.IntVar(value=3) # Default to Calculator
         ttk.Radiobutton(mode_frame, text="Regex Analysis (NFA/DFA)", variable=self.mode_var, value=1).pack(side=tk.LEFT, padx=5)
         ttk.Radiobutton(mode_frame, text="Calculator (PDA)", variable=self.mode_var, value=3).pack(side=tk.LEFT, padx=5)
 
         ttk.Label(input_frame, text="Enter Input:").pack(side=tk.LEFT)
         self.regex_entry = ttk.Entry(input_frame, width=40, font=('Consolas', 11))
         self.regex_entry.pack(side=tk.LEFT, padx=10)
-        self.regex_entry.insert(0, "(a|b)*abb")
+        self.regex_entry.insert(0, "x = 5 + 3")
         self.regex_entry.bind('<Return>', lambda e: self.run_visualization())
 
-        self.btn_run = ttk.Button(input_frame, text="Generate Automata", command=self.run_visualization)
+        self.btn_run = ttk.Button(input_frame, text="Generate/Simulate", command=self.run_visualization)
         self.btn_run.pack(side=tk.LEFT, padx=10)
 
         # Symbol Toolbar
         toolbar_frame = ttk.Frame(control_frame)
         toolbar_frame.pack(fill=tk.X, pady=2)
         
-        symbols = ['*', '|', '(', ')', '+', '?', '[a-z]', '[0-9]']
+        symbols = ['*', '|', '(', ')', '+', '?', '[a-z]', '[0-9]', '=', 'x', 'y', 'z']
         for sym in symbols:
             btn = ttk.Button(toolbar_frame, text=sym, width=5, command=lambda s=sym: self.insert_symbol(s))
             btn.pack(side=tk.LEFT, padx=2)
@@ -70,6 +71,11 @@ class AutomataVisualizer:
         self.tab_nfa = self.create_tab("NFA")
         self.tab_dfa = self.create_tab("DFA")
         self.tab_min = self.create_tab("Minimized DFA")
+        
+        # New Tabs for Calculator
+        self.tab_tokens = self.create_tree_tab("Tokens", ["Type", "Value"])
+        self.tab_stack = self.create_tree_tab("Parser Stack", ["State", "Input Index", "Stack Content"])
+        
         self.tab_console = self.create_text_tab("Console Output")
 
         # Dictionary to hold PhotoImage references to prevent garbage collection
@@ -87,6 +93,24 @@ class AutomataVisualizer:
         text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         frame.text_area = text_area
+        return frame
+
+    def create_tree_tab(self, title, columns):
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text=title)
+
+        tree = ttk.Treeview(frame, columns=columns, show='headings')
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=150 if col != "Stack Content" else 400)
+
+        scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll_y.set)
+        
+        scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        frame.tree = tree
         return frame
 
     def create_tab(self, title):
@@ -134,8 +158,12 @@ class AutomataVisualizer:
         self.status_var.set("Running Compiler...")
         self.root.update()
 
-        # 1. Run main.exe
-        # 1. Run main.exe
+        # Clear previous data
+        for tab in [self.tab_tokens, self.tab_stack]:
+            for item in tab.tree.get_children():
+                tab.tree.delete(item)
+
+        # 1. Run compiler_frontend.exe
         try:
             mode = self.mode_var.get()
             # Input: Mode -> Input -> Enter
@@ -154,9 +182,33 @@ class AutomataVisualizer:
             self.tab_console.text_area.insert(tk.END, proc.stdout)
             
             if mode == 3:
-                self.notebook.select(self.tab_console)
-                self.status_var.set("PDA Simulation Complete.")
+                # Parse Output for Tokens and Stack
+                output_lines = proc.stdout.splitlines()
+                token_count = 0
+                stack_count = 0
+                
+                for line in output_lines:
+                    line = line.strip()
+                    # Parse Token: Token: TYPE (VALUE)
+                    token_match = re.search(r"Token: (\w+) \((.*)\)", line)
+                    if token_match:
+                        self.tab_tokens.tree.insert('', tk.END, values=(token_match.group(1), token_match.group(2)))
+                        token_count += 1
+
+                    # Parse Stack: State: 0, InputIdx: 0, Stack: Z E
+                    stack_match = re.search(r"State: (\d+), InputIdx: (\d+), Stack: (.*)", line)
+                    if stack_match:
+                        self.tab_stack.tree.insert('', tk.END, values=(stack_match.group(1), stack_match.group(2), stack_match.group(3)))
+                        stack_count += 1
+                
+                self.tab_console.text_area.insert(tk.END, f"\n\n[DEBUG] Parsed {token_count} tokens and {stack_count} stack states.\n")
+                if token_count == 0:
+                     self.tab_console.text_area.insert(tk.END, f"[DEBUG] Warning: No tokens found. Check if output format matches 'Token: TYPE (VALUE)'.\n")
+
+                self.notebook.select(self.tab_stack)
+                self.status_var.set(f"PDA Simulation Complete. Parsed {token_count} tokens.")
                 return # Skip graph generation for calculator
+
                 
         except Exception as e:
             self.status_var.set("Error running compiler")
@@ -196,8 +248,8 @@ class AutomataVisualizer:
         self.status_var.set("Done.")
 
 if __name__ == "__main__":
-    if not os.path.exists("main.exe") and not os.path.exists("src/main.exe"):
-        messagebox.showwarning("Missing Executable", "Could not find main.exe. Please compile the C++ project first.")
+    if not os.path.exists("compiler_frontend.exe") and not os.path.exists("src/compiler_frontend.exe"):
+        messagebox.showwarning("Missing Executable", "Could not find compiler_frontend.exe. Please compile the C++ project first.")
     
     root = tk.Tk()
     app = AutomataVisualizer(root)

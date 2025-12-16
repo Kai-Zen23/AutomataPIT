@@ -57,12 +57,19 @@ void testCalculator() {
     DFA dfaRParen = DFA::fromNFA(std::move(nfaRParen));
     dfaRParen.minimize();
     lexer.addRule("RPAREN", std::move(dfaRParen));
+
+    NFA nfaEq = parser.parse("=");
+    DFA dfaEq = DFA::fromNFA(std::move(nfaEq));
+    dfaEq.minimize();
+    lexer.addRule("EQUALS", std::move(dfaEq));
+
   } catch (const std::exception &e) {
     std::cerr << "Lexer Setup Error: " << e.what() << std::endl;
     return;
   }
 
   // PDA Construction
+  // S -> IDENTIFIER = E | E
   // E -> T E'
   // E' -> + T E' | - T E' | epsilon
   // T -> F T'
@@ -72,8 +79,13 @@ void testCalculator() {
   PDA pdaCalc(0, "Z");
   pdaCalc.addAcceptState(1);
 
-  // Start: Push E
-  pdaCalc.addTransition(0, EPSILON_STR, "Z", 0, {"E", "Z"});
+  // Start: Push S
+  pdaCalc.addTransition(0, EPSILON_STR, "Z", 0, {"S", "Z"});
+
+  // S -> IDENTIFIER = E
+  pdaCalc.addTransition(0, EPSILON_STR, "S", 0, {"IDENTIFIER", "EQUALS", "E"});
+  // S -> E
+  pdaCalc.addTransition(0, EPSILON_STR, "S", 0, {"E"});
 
   // E -> T E'
   pdaCalc.addTransition(0, EPSILON_STR, "E", 0, {"T", "E'"});
@@ -111,6 +123,7 @@ void testCalculator() {
   pdaCalc.addTransition(0, "RPAREN", "RPAREN", 0, {});
   pdaCalc.addTransition(0, "NUMBER", "NUMBER", 0, {});
   pdaCalc.addTransition(0, "IDENTIFIER", "IDENTIFIER", 0, {});
+  pdaCalc.addTransition(0, "EQUALS", "EQUALS", 0, {});
 
   // Finish
   pdaCalc.addTransition(0, EPSILON_STR, "Z", 1, {"Z"});
