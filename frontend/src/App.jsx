@@ -16,7 +16,9 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState([]);
+  const historyRef = useRef(null);
+  const traceEndRef = useRef(null);
+  const logEndRef = useRef(null);
   const playRef = useRef(null);
 
   const fetchHistory = async () => {
@@ -35,6 +37,20 @@ function App() {
     fetchHistory();
   }, []);
 
+  // Auto-scroll Trace when it updates
+  useEffect(() => {
+    if (traceEndRef.current) {
+      traceEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [trace, step]); // update on trace change or step change
+
+  // Auto-scroll Log when output updates
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollTop = logEndRef.current.scrollHeight;
+    }
+  }, [output]);
+
   // Auto-play loop
   useEffect(() => {
     if (isPlaying) {
@@ -50,6 +66,7 @@ function App() {
     }
     return () => clearInterval(playRef.current);
   }, [isPlaying, trace.length, speed]);
+
 
   // Parse active state from current trace step
   const getActiveStateId = () => {
@@ -283,7 +300,7 @@ function App() {
                             </div>
                           </div>
                         ))}
-                        <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
+                        <div ref={traceEndRef} />
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-slate-700">
@@ -362,11 +379,10 @@ function App() {
               <div className="h-10 bg-[#0A0A0A] border-b border-white/5 flex items-center px-4">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">System Log</span>
               </div>
-              <div className="flex-1 bg-[#020202] p-4 overflow-auto min-h-0 font-mono text-xs leading-relaxed text-slate-300">
+              <div ref={logEndRef} className="flex-1 bg-[#020202] p-4 overflow-auto min-h-0 font-mono text-xs leading-relaxed text-slate-300">
                 <pre className="whitespace-pre-wrap">
                   {output || <span className="text-slate-700 italic">// Waiting for input...</span>}
                 </pre>
-                <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
               </div>
             </div>
 
