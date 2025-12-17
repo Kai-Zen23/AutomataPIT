@@ -58,7 +58,8 @@ const GraphVisualizer = ({ dotString, activeStateId }) => {
 
     return (
         <div ref={containerRef} className="graph-container overflow-auto bg-[#0B0F19] p-4 rounded-xl border border-slate-800 h-full flex items-center justify-center">
-            <Graphviz dot={processedDot} options={{ height: "100%", width: "100%", fit: true, zoom: true }} />
+            {/* Disabled 'fit' to allow natural scaling (larger nodes), user can zoom/pan or scroll */}
+            <Graphviz dot={processedDot} options={{ fit: false, zoom: true }} />
         </div>
     );
 };
