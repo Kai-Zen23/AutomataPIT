@@ -191,6 +191,36 @@ function App() {
               </button>
             </div>
           </div>
+
+          {/* Helper Examples */}
+          <div className="flex gap-2 items-center text-sm">
+            <span className="text-slate-500 font-medium">Examples:</span>
+            {mode === 1 ? (
+              <>
+                <button onClick={() => { setInput('[a-zA-Z_][a-zA-Z0-9]*'); setTestString('myVar_1'); }} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 transition-colors">
+                  Valid Identifier
+                </button>
+                <button onClick={() => { setInput('(a|b)*abb'); setTestString('ababb'); }} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 transition-colors">
+                  Ends with abb
+                </button>
+                <button onClick={() => { setInput('[0-9]+(\\.[0-9]+)?'); setTestString('3.1415'); }} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 transition-colors">
+                  Floating Point
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setInput('x = 5 + 3')} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded border border-slate-700 transition-colors">
+                  Simple Assign
+                </button>
+                <button onClick={() => setInput('res = ( 5 + 3 ) * 2')} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded border border-slate-700 transition-colors">
+                  Parentheses
+                </button>
+                <button onClick={() => setInput('val = 10 + 5 * 2')} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded border border-slate-700 transition-colors">
+                  Precedence
+                </button>
+              </>
+            )}
+          </div>
         </section>
 
         {/* Main Workspace */}
