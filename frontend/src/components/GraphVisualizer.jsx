@@ -49,70 +49,82 @@ const GraphVisualizer = ({ dotString, activeStateId }) => {
         const fromId = prevActiveStateIdRef.current;
         const toId = activeStateId;
 
-        // Don't animate if staying on same node (unless self-loop, but checking logic is complex)
-        if (fromId === toId) return;
+        // Safety check
+        if (typeof window === 'undefined') return;
 
-        // Find the SVG in the DOM
-        const svg = containerRef.current.querySelector('svg');
-        if (!svg) return;
+        try {
+            // Don't animate if staying on same node (unless self-loop, but checking logic is complex)
+            if (fromId === toId) return;
 
-        // Graphviz generates edges result in <g class="edge"> with <title>q0->q1</title> or similar
-        // We need to find the edge connecting these two.
-        // Title format is usually "NodeA->NodeB"
+            // Find the SVG in the DOM
+            const svg = containerRef.current.querySelector('svg');
+            if (!svg) return;
 
-        // Try formats: "q0->q1" or "0->1"
-        const possibleTitles = [
-            `q${fromId}->q${toId}`,
-            `${fromId}->${toId}`,
-            `q${fromId}->${toId}`, // Mixed (unlikely)
-            `${fromId}->q${toId}`  // Mixed (unlikely)
-        ];
+            // Graphviz generates edges result in <g class="edge"> with <title>q0->q1</title> or similar
+            // We need to find the edge connecting these two.
+            // Title format is usually "NodeA->NodeB"
 
-        let edgePath = null;
-        const edges = svg.querySelectorAll('.edge');
+            // Try formats: "q0->q1" or "0->1"
+            const possibleTitles = [
+                `q${fromId}->q${toId}`,
+                `${fromId}->${toId}`,
+                `q${fromId}->${toId}`, // Mixed (unlikely)
+                `${fromId}->q${toId}`  // Mixed (unlikely)
+            ];
 
-        for (const edge of edges) {
-            const title = edge.querySelector('title');
-            if (title && possibleTitles.includes(title.textContent)) {
-                edgePath = edge.querySelector('path');
-                break;
+            let edgePath = null;
+            const edges = svg.querySelectorAll('.edge');
+
+            for (const edge of edges) {
+                const title = edge.querySelector('title');
+                if (title && possibleTitles.includes(title.textContent)) {
+                    edgePath = edge.querySelector('path');
+                    break;
+                }
             }
-        }
 
-        if (edgePath) {
-            // Create a particle
-            const particle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            particle.setAttribute("r", "4");
-            particle.setAttribute("fill", "#38bdf8"); // Sky-400
-            particle.setAttribute("filter", "drop-shadow(0 0 2px #38bdf8)");
+            if (edgePath) {
+                // Create a particle
+                const particle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                particle.setAttribute("r", "4");
+                particle.setAttribute("fill", "#38bdf8"); // Sky-400
+                particle.setAttribute("filter", "drop-shadow(0 0 2px #38bdf8)");
 
-            // Append to SVG (ensure it's on top)
-            svg.appendChild(particle);
+                // Append to SVG (ensure it's on top)
+                svg.appendChild(particle);
 
-            // Animate
-            // We use the Web Animations API on the particle, setting its offset-path
-            // Note: 'offset-path' CSS property support is good in modern browsers (Chrome/Edge/FF)
+                // Animate
+                try {
+                    // Get the path data
+                    const pathData = edgePath.getAttribute('d');
 
-            // However, SVG 'd' path can be complex. 
-            // Better approach: Animate 'motion' along path using SMIL or simple JS.
-            // Simplest Modern Way: Web Animations API with offsetPath
+                    // Check if offset-path is supported (it is in Chrome/Edge, but maybe not all)
+                    if (particle.style.offsetPath !== undefined) {
+                        particle.style.offsetPath = `path('${pathData}')`;
 
-            // Get the path data
-            const pathData = edgePath.getAttribute('d');
-            particle.style.offsetPath = `path('${pathData}')`;
+                        const animation = particle.animate([
+                            { offsetDistance: '0%' },
+                            { offsetDistance: '100%' }
+                        ], {
+                            duration: 400, // ms
+                            easing: 'ease-in-out',
+                            fill: 'forwards'
+                        });
 
-            const animation = particle.animate([
-                { offsetDistance: '0%' },
-                { offsetDistance: '100%' }
-            ], {
-                duration: 400, // ms
-                easing: 'ease-in-out',
-                fill: 'forwards'
-            });
-
-            animation.onfinish = () => {
-                if (particle.parentNode) particle.parentNode.removeChild(particle);
-            };
+                        animation.onfinish = () => {
+                            if (particle.parentNode) particle.parentNode.removeChild(particle);
+                        };
+                    } else {
+                        // Fallback: just remove it if animation API not supported fully
+                        if (particle.parentNode) particle.parentNode.removeChild(particle);
+                    }
+                } catch (animErr) {
+                    // console.warn("Animation failed", animErr);
+                    if (particle.parentNode) particle.parentNode.removeChild(particle);
+                }
+            }
+        } catch (e) {
+            console.error("Graph animation error:", e);
         }
 
         prevActiveStateIdRef.current = activeStateId;
