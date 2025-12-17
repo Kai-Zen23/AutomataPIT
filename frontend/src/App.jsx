@@ -358,14 +358,15 @@ function App() {
           <section className="lg:col-span-4 flex flex-col gap-6 h-full">
 
             {/* Terminal Log */}
-            <div className="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col shadow-xl">
+            <div className="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col shadow-xl min-h-0">
               <div className="h-10 bg-[#0A0A0A] border-b border-white/5 flex items-center px-4">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">System Log</span>
               </div>
-              <div className="flex-1 bg-[#020202] p-4 overflow-auto font-mono text-xs leading-relaxed text-slate-300">
+              <div className="flex-1 bg-[#020202] p-4 overflow-auto min-h-0 font-mono text-xs leading-relaxed text-slate-300">
                 <pre className="whitespace-pre-wrap">
                   {output || <span className="text-slate-700 italic">// Waiting for input...</span>}
                 </pre>
+                <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
               </div>
             </div>
 
