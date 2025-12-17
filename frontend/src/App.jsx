@@ -410,7 +410,7 @@ function App() {
                 <p className="font-mono text-sm text-slate-300 truncate mb-1" title={item.input_text}>
                   {item.input_text}
                 </p>
-                {item.test_string && (
+                {item.mode === 1 && item.test_string && (
                   <p className="font-mono text-xs text-slate-500 truncate">
                     Test: {item.test_string}
                   </p>
