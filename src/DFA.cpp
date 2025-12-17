@@ -310,9 +310,54 @@ void DFA::toDot(std::string filename, std::string label) {
     if (s->isAccepting) {
       out << "  " << s->id << " [shape=doublecircle];" << std::endl;
     }
+
+    // Group transitions by target state
+    // TargetID -> set of chars
+    std::map<int, std::vector<char>> groupedTransitions;
     for (auto const &[key, val] : s->transitions) {
-      std::string label = (key == EPSILON) ? "ε" : std::string(1, key);
-      out << "  " << s->id << " -> " << val->id << " [label=\"" << label
+      groupedTransitions[val->id].push_back(key);
+    }
+
+    for (auto &[targetId, chars] : groupedTransitions) {
+      std::sort(chars.begin(), chars.end());
+
+      std::string labelStr = "";
+      // Smart formatting: collapse ranges like a,b,c -> a-c
+      if (chars.size() > 3) {
+        // Simple range detection for continuous blocks
+        // This is a basic implementation. Ideally we'd scan for ranges.
+        // Let's do a simple scan
+        for (size_t i = 0; i < chars.size(); ++i) {
+          if (i > 0)
+            labelStr += ",";
+
+          char start = chars[i];
+          while (i + 1 < chars.size() && chars[i + 1] == chars[i] + 1) {
+            i++;
+          }
+          char end = chars[i];
+
+          if (start == end) {
+            labelStr += std::string(1, start);
+          } else if (end == start + 1) {
+            labelStr += std::string(1, start) + "," + std::string(1, end);
+          } else {
+            labelStr += std::string(1, start) + "-" + std::string(1, end);
+          }
+        }
+        // If label is still too long, truncate it
+        if (labelStr.length() > 20) {
+          labelStr = labelStr.substr(0, 17) + "...";
+        }
+      } else {
+        for (size_t i = 0; i < chars.size(); ++i) {
+          if (i > 0)
+            labelStr += ",";
+          labelStr += (chars[i] == EPSILON) ? "ε" : std::string(1, chars[i]);
+        }
+      }
+
+      out << "  " << s->id << " -> " << targetId << " [label=\"" << labelStr
           << "\"];" << std::endl;
     }
   }
