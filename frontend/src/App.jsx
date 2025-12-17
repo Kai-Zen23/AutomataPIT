@@ -16,7 +16,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
   const [loading, setLoading] = useState(false);
-  const historyRef = useRef(null);
+  const [history, setHistory] = useState([]);
   const traceEndRef = useRef(null);
   const logEndRef = useRef(null);
   const playRef = useRef(null);
