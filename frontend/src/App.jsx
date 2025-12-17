@@ -108,323 +108,277 @@ function App() {
 
   const getVisibleStack = () => {
     if (step < 0 || !trace[step] || trace[step].type !== 'stack') return [];
-    // In a real implementation we would accumulate the stack actions
-    // But our parser currently returns "Stack Content" as a string in the trace event
-    // So we can just show the current row.
     return trace.slice(0, step + 1).filter(t => t.type === 'stack');
   };
 
-  const getVisibleTokens = () => {
-    // Show tokens accumulated up to current step
-    if (step < 0) return [];
-    // This logic depends on when tokens appear in the trace vs stack actions
-    // For now, let's just show all tokens that have appeared so far
-    return trace.slice(0, step + 1).filter(t => t.type === 'token');
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans selection:bg-sky-500/30">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#050505] text-slate-100 font-sans selection:bg-sky-500/30 selection:text-sky-200">
 
-        {/* Header */}
-        <header className="flex items-center justify-between border-b border-slate-800 pb-6">
+      {/* Glass Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-white/5 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-500/20">
+            <span className="font-mono font-bold text-white text-lg">A</span>
+          </div>
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
-              Automata Visualizer
-            </h1>
-            <p className="text-slate-400 mt-2">Interactive C++ Compiler Frontend Simulator</p>
+            <h1 className="text-lg font-bold tracking-tight text-white">Automata Visualizer</h1>
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Engineering Toolkit</p>
           </div>
-          <div className="flex space-x-4 bg-slate-900 p-1 rounded-lg border border-slate-800">
-            <button
-              onClick={() => setMode(1)}
-              className={`px-4 py-2 rounded-md transition-all ${mode === 1 ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/20' : 'text-slate-400 hover:text-white'}`}
-            >
-              Regex Analysis
-            </button>
-            <button
-              onClick={() => setMode(3)}
-              className={`px-4 py-2 rounded-md transition-all ${mode === 3 ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/20' : 'text-slate-400 hover:text-white'}`}
-            >
-              Calculator (PDA)
-            </button>
-          </div>
-        </header>
+        </div>
 
-        {/* Input Area */}
-        <section className="bg-slate-900/50 rounded-xl border border-slate-800 p-6 backdrop-blur-sm space-y-4">
+        {/* Segmented Control for Mode */}
+        <div className="bg-slate-900/50 p-1 rounded-lg border border-white/5 flex gap-1">
+          <button
+            onClick={() => setMode(1)}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${mode === 1 ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+          >
+            Regex Analysis
+          </button>
+          <button
+            onClick={() => setMode(3)}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${mode === 3 ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+          >
+            Calculator (PDA)
+          </button>
+        </div>
+      </nav>
 
-          <div className="flex gap-4 items-start">
-            <div className="flex-1 space-y-1">
-              <label className="block text-sm font-medium text-slate-400">
-                {mode === 1 ? 'Regex Pattern' : 'Expression'}
-              </label>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 font-mono text-lg focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder-slate-600"
-                placeholder={mode === 1 ? "(a|b)abb" : "x = 5 + 3"}
-              />
-            </div>
+      <main className="pt-24 pb-12 px-6 max-w-[1600px] mx-auto space-y-6">
 
-            {mode === 1 && (
-              <div className="flex-1 space-y-1">
-                <label className="block text-sm font-medium text-slate-400">Test String</label>
-                <input
-                  type="text"
-                  value={testString}
-                  onChange={(e) => setTestString(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 font-mono text-lg focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder-slate-600"
-                  placeholder="aabb"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
-                />
+        {/* Input Panel */}
+        <section className="glass-panel rounded-2xl p-1 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+          <div className="bg-[#0A0A0A]/80 p-6 rounded-xl space-y-6">
+            <div className="flex gap-6 items-start">
+              <div className="flex-1 space-y-2">
+                <label className="text-xs font-semibold text-sky-500 uppercase tracking-wider">
+                  {mode === 1 ? 'Regular Expression' : 'Input Expression'}
+                </label>
+                <div className="relative group/input">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-5 py-4 font-mono text-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500/50 transition-all shadow-inner"
+                    placeholder={mode === 1 ? "(a|b)*abb" : "x = 5 + 3"}
+                  />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/5 pointer-events-none group-hover/input:ring-white/10 transition-all" />
+                </div>
               </div>
-            )}
 
-            <div className="flex items-end self-end">
-              <button
-                onClick={handleSimulate}
-                disabled={loading}
-                className="bg-sky-600 hover:bg-sky-500 text-white px-8 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-900/20 flex items-center gap-2 h-[54px]"
-              >
-                {loading ? 'Compiling...' : 'Visualize'}
-              </button>
+              {mode === 1 && (
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Test String</label>
+                  <div className="relative group/input">
+                    <input
+                      type="text"
+                      value={testString}
+                      onChange={(e) => setTestString(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSimulate()}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-5 py-4 font-mono text-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all shadow-inner"
+                      placeholder="aabb"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-8">
+                <button
+                  onClick={handleSimulate}
+                  disabled={loading}
+                  className="h-[54px] px-8 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white rounded-xl font-semibold shadow-lg shadow-sky-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Processing</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Visualize</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Helper Examples */}
-          <div className="flex gap-2 items-center text-sm">
-            <span className="text-slate-500 font-medium">Examples:</span>
-            {mode === 1 ? (
-              <>
-                <button onClick={() => { setInput('[a-zA-Z_][a-zA-Z0-9]*'); setTestString('myVar_1'); }} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 transition-colors">
-                  Valid Identifier
-                </button>
-                <button onClick={() => { setInput('(a|b)*abb'); setTestString('ababb'); }} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 transition-colors">
-                  Ends with abb
-                </button>
-                <button onClick={() => { setInput('[0-9]+(\\.[0-9]+)?'); setTestString('3.1415'); }} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded border border-slate-700 transition-colors">
-                  Floating Point
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => setInput('x = 5 + 3')} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded border border-slate-700 transition-colors">
-                  Simple Assign
-                </button>
-                <button onClick={() => setInput('res = ( 5 + 3 ) * 2')} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded border border-slate-700 transition-colors">
-                  Parentheses
-                </button>
-                <button onClick={() => setInput('val = 10 + 5 * 2')} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded border border-slate-700 transition-colors">
-                  Precedence
-                </button>
-              </>
-            )}
+            {/* Quick Examples */}
+            <div className="flex items-center gap-4 text-sm border-t border-white/5 pt-4">
+              <span className="text-slate-500 font-medium text-xs uppercase tracking-wider">Presets</span>
+              <div className="flex flex-wrap gap-2">
+                {mode === 1 ? (
+                  <>
+                    <button onClick={() => { setInput('[a-zA-Z_][a-zA-Z0-9]*'); setTestString('my_var_1'); }} className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-md border border-white/10 text-xs font-mono transition-colors">Identifier</button>
+                    <button onClick={() => { setInput('[0-9]+(\.[0-9]+)?'); setTestString('3.1415'); }} className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-md border border-white/10 text-xs font-mono transition-colors">Float</button>
+                    <button onClick={() => { setInput('(a|b)*abb'); setTestString('ababb'); }} className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-md border border-white/10 text-xs font-mono transition-colors">Ends 'abb'</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setInput('x = 5 + 3')} className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-md border border-white/10 text-xs font-mono transition-colors">Assignment</button>
+                    <button onClick={() => setInput('res = ( 10 + 2 ) * 5')} className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-md border border-white/10 text-xs font-mono transition-colors">Complex Math</button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Main Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[700px]">
+        {/* Dashboards Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[800px]">
 
-          {/* Left: Visualization (Graph or Trace) */}
-          <section className="bg-slate-900 rounded-xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/80">
-              {/* View Tabs */}
-              <div className="flex space-x-1 bg-slate-950/50 p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode('trace')}
-                  className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'trace' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                  Trace Table
-                </button>
-                {graphs.nfa && (
-                  <button
-                    onClick={() => setViewMode('nfa')}
-                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'nfa' ? 'bg-sky-800/50 text-sky-200 shadow-sm border border-sky-700/50' : 'text-slate-500 hover:text-sky-400'}`}
-                  >
-                    NFA Graph
-                  </button>
-                )}
-                {graphs.dfa && (
-                  <button
-                    onClick={() => setViewMode('dfa')}
-                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'dfa' ? 'bg-emerald-800/50 text-emerald-200 shadow-sm border border-emerald-700/50' : 'text-slate-500 hover:text-emerald-400'}`}
-                  >
-                    DFA Graph
-                  </button>
-                )}
-                {graphs.min_dfa && (
-                  <button
-                    onClick={() => setViewMode('min_dfa')}
-                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'min_dfa' ? 'bg-indigo-800/50 text-indigo-200 shadow-sm border border-indigo-700/50' : 'text-slate-500 hover:text-indigo-400'}`}
-                  >
-                    Min DFA
-                  </button>
-                )}
-                {graphs.pda && (
-                  <button
-                    onClick={() => setViewMode('pda')}
-                    className={`px-3 py-1.5 rounded text-xs font-semibold overflow-hidden transition-all ${viewMode === 'pda' ? 'bg-purple-800/50 text-purple-200 shadow-sm border border-purple-700/50' : 'text-slate-500 hover:text-purple-400'}`}
-                  >
-                    PDA Graph
-                  </button>
-                )}
-              </div>
-
+          {/* Left: Visualization (8 cols) */}
+          <section className="lg:col-span-8 flex flex-col glass-panel rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
+            <div className="h-12 bg-[#0A0A0A] border-b border-white/5 flex justify-between items-center px-4">
               <div className="flex items-center gap-2">
-                <div className="px-3 py-1 bg-slate-800 rounded text-xs font-mono text-sky-400 border border-slate-700">
-                  Step: {step + 1} / {trace.length}
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
+                  <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/50"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/50"></div>
                 </div>
+                <span className="text-xs font-mono text-slate-400 ml-3">visualizer.out</span>
+              </div>
+
+              {/* Graph Controls */}
+              <div className="flex bg-[#050505] p-0.5 rounded-lg border border-white/5">
+                {[
+                  { id: 'trace', label: 'TRACE' },
+                  ...(graphs.nfa ? [{ id: 'nfa', label: 'NFA' }] : []),
+                  ...(graphs.dfa ? [{ id: 'dfa', label: 'DFA' }] : []),
+                  ...(graphs.min_dfa ? [{ id: 'min_dfa', label: 'MIN-DFA' }] : []),
+                  ...(graphs.pda ? [{ id: 'pda', label: 'PDA' }] : []),
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setViewMode(tab.id)}
+                    className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === tab.id ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="flex-1 overflow-hidden relative bg-[#0B0F19]">
-              {viewMode === 'trace' ? (
-                <div className="h-full overflow-auto p-4 space-y-2">
-                  {trace.length > 0 ? (
-                    <>
-                      {getVisibleStack().map((t, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors group animate-in fade-in slide-in-from-left-4 duration-300">
-                          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-xs font-mono text-slate-400 group-hover:bg-sky-900/30 group-hover:text-sky-400">
-                            {t.data.step}
-                          </div>
-                          <div className="flex-1 font-mono text-sm">
-                            <div className="flex justify-between text-slate-400 text-xs mb-1">
-                              <span>Idx: {t.data.input_index}</span>
-                              <span className="text-emerald-400">{t.data.action}</span>
+            {/* Viewer Area */}
+            <div className="flex-1 bg-[#050505] relative overflow-hidden flex flex-col">
+              <div className="flex-1 relative overflow-auto">
+                {viewMode === 'trace' ? (
+                  <div className="p-4 space-y-1 font-mono text-sm max-h-full">
+                    {trace.length > 0 ? (
+                      <>
+                        {getVisibleStack().map((t, i) => (
+                          <div key={i} className="flex gap-4 p-2 rounded hover:bg-white/5 border border-transparent hover:border-white/5 transition-colors group">
+                            <div className="w-8 flex-shrink-0 text-slate-600 text-right select-none">{t.data.step}</div>
+                            <div className="flex-1 font-mono">
+                              <div className="text-slate-400 text-xs mb-0.5 flex justify-between">
+                                <span>idx: {t.data.input_index}</span>
+                                <span className="text-emerald-500 font-bold">{t.data.action}</span>
+                              </div>
+                              <div className="text-sky-200">{t.data.stack_content}</div>
                             </div>
-                            <div className="text-slate-200 bg-slate-950 px-2 py-1 rounded border border-slate-800/50">
-                              {t.data.stack_content}
-                            </div>
                           </div>
-                        </div>
-                      ))}
-                      <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
-                    </>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-600 space-y-4">
-                      <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl">
-                        ⚡
+                        ))}
+                        <div ref={(el) => el?.scrollIntoView({ behavior: 'smooth' })} />
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-slate-700">
+                        <p className="text-lg font-light tracking-wide">// No trace data available</p>
                       </div>
-                      <p>Run a simulation to see the trace.</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <GraphVisualizer
-                  dotString={graphs[viewMode]}
-                  activeStateId={getActiveStateId()}
-                />
-              )}
-            </div>
-
-            {/* Controls */}
-            <div className="p-4 border-t border-slate-800 bg-slate-900/80 backdrop-blur">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setStep(s => Math.max(-1, s - 1))}
-                    disabled={step < 0}
-                    className="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    disabled={trace.length === 0}
-                    className={`px-6 py-2 rounded font-medium transition-all ${isPlaying ? 'bg-amber-600/20 text-amber-400 border border-amber-600/50' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'}`}
-                  >
-                    {isPlaying ? 'Pause' : 'Play'}
-                  </button>
-                  <button
-                    onClick={() => setStep(s => Math.min(trace.length - 1, s + 1))}
-                    disabled={step >= trace.length - 1}
-                    className="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    Next
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3 flex-1 justify-end">
-                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Speed</span>
-                  <input
-                    type="range"
-                    min="100"
-                    max="2000"
-                    step="100"
-                    value={speed}
-                    onChange={(e) => setSpeed(Number(e.target.value))}
-                    className="w-32 accent-sky-500"
+                    )}
+                  </div>
+                ) : (
+                  <GraphVisualizer
+                    dotString={graphs[viewMode]}
+                    activeStateId={getActiveStateId()}
                   />
+                )}
+              </div>
+
+              {/* Playback Grid */}
+              <div className="h-16 bg-[#0A0A0A] border-t border-white/5 flex items-center px-4 justify-between">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setStep(s => Math.max(-1, s - 1))} disabled={step < 0} className="p-2 rounded hover:bg-white/10 text-slate-400 disabled:opacity-25 transition-colors">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
+                  </button>
+                  <button onClick={() => setIsPlaying(!isPlaying)} disabled={trace.length === 0} className="w-10 h-10 rounded-full bg-slate-800 hover:bg-sky-600 text-white flex items-center justify-center transition-all shadow-lg">
+                    {isPlaying ? (
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                    )}
+                  </button>
+                  <button onClick={() => setStep(s => Math.min(trace.length - 1, s + 1))} disabled={step >= trace.length - 1} className="p-2 rounded hover:bg-white/10 text-slate-400 disabled:opacity-25 transition-colors">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
+                  </button>
+                </div>
+
+                <div className="px-3 py-1 bg-slate-900 rounded border border-white/5 text-xs text-sky-400 font-mono shadow-inner">
+                  Step: {step + 1} <span className="text-slate-600">/</span> {trace.length}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Speed</span>
+                  <input type="range" min="100" max="2000" step="100" value={speed} onChange={e => setSpeed(Number(e.target.value))} className="w-24 accent-sky-500 h-1 bg-slate-800 rounded-full appearance-none" />
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Center: Console Output */}
-          <section className="bg-slate-900 rounded-xl border border-slate-800 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-800 bg-slate-900/80">
-              <h2 className="font-semibold text-slate-200">Execution Log</h2>
+          {/* Right: Logs & History (4 cols) */}
+          <section className="lg:col-span-4 flex flex-col gap-6 h-full">
+
+            {/* Terminal Log */}
+            <div className="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col shadow-xl">
+              <div className="h-10 bg-[#0A0A0A] border-b border-white/5 flex items-center px-4">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">System Log</span>
+              </div>
+              <div className="flex-1 bg-[#020202] p-4 overflow-auto font-mono text-xs leading-relaxed text-slate-300">
+                <pre className="whitespace-pre-wrap">
+                  {output || <span className="text-slate-700 italic">// Waiting for input...</span>}
+                </pre>
+              </div>
             </div>
-            <div className="flex-1 overflow-auto p-0 bg-slate-950">
-              <pre className="p-4 font-mono text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {output || <span className="text-slate-600 italic">// Console output will appear here...</span>}
-              </pre>
+
+            {/* Recent History */}
+            <div className="h-[300px] glass-panel rounded-2xl overflow-hidden flex flex-col shadow-xl">
+              <div className="h-10 bg-[#0A0A0A] border-b border-white/5 flex items-center justify-between px-4">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">History</span>
+                <button onClick={fetchHistory} className="text-[10px] text-sky-500 hover:text-sky-400 hover:underline">REFRESH</button>
+              </div>
+              <div className="flex-1 overflow-auto p-2 space-y-1 bg-[#050505]">
+                {history.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setMode(item.mode);
+                      setInput(item.input_text);
+                      setTestString(item.test_string || '');
+                      if (item.result_output) setOutput(item.result_output);
+                    }}
+                    className="w-full text-left p-3 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/5 transition-all group"
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wider ${item.mode === 1 ? 'bg-sky-500/10 text-sky-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
+                        {item.mode === 1 ? 'REGEX' : 'PDA'}
+                      </span>
+                      <span className="text-[10px] text-slate-600 group-hover:text-slate-500">{new Date(item.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <div className="font-mono text-xs text-slate-300 truncate opacity-80 group-hover:opacity-100">{item.input_text}</div>
+                    {item.mode === 1 && item.test_string && (
+                      <div className="font-mono text-[10px] text-slate-500 truncate mt-0.5">Test: <span className="text-slate-400">{item.test_string}</span></div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 
         </div>
-
-        {/* Bottom: Recent History */}
-        <section className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Recent History
-            </h2>
-            <button onClick={fetchHistory} className="text-sm text-slate-400 hover:text-white underline">
-              Refresh
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {history.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => {
-                  setMode(item.mode);
-                  setInput(item.input_text);
-                  setTestString(item.test_string || '');
-                  if (item.result_output) setOutput(item.result_output);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="bg-slate-950 border border-slate-800 p-4 rounded-lg cursor-pointer hover:bg-slate-800 transition-all group"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className={`text-xs px-2 py-0.5 rounded font-mono ${item.mode === 1 ? 'bg-sky-900/50 text-sky-300' : 'bg-indigo-900/50 text-indigo-300'}`}>
-                    {item.mode === 1 ? 'REGEX' : 'CALC'}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    {new Date(item.created_at).toLocaleTimeString()}
-                  </span>
-                </div>
-                <p className="font-mono text-sm text-slate-300 truncate mb-1" title={item.input_text}>
-                  {item.input_text}
-                </p>
-                {item.mode === 1 && item.test_string && (
-                  <p className="font-mono text-xs text-slate-500 truncate">
-                    Test: {item.test_string}
-                  </p>
-                )}
-              </div>
-            ))}
-            {history.length === 0 && (
-              <div className="col-span-full text-center py-8 text-slate-500 italic">
-                No history yet. Run a simulation to see it here.
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+      </main>
     </div>
   );
 }
