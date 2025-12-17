@@ -11,7 +11,7 @@ function App() {
   const [output, setOutput] = useState('');
   const [trace, setTrace] = useState([]);
   const [graphs, setGraphs] = useState({}); // { nfa: "...", dfa: "...", min_dfa: "..." }
-  const [viewMode, setViewMode] = useState('trace'); // 'trace' | 'nfa' | 'dfa' | 'min_dfa'
+  const [viewMode, setViewMode] = useState('trace'); // 'trace' | 'nfa' | 'dfa' | 'min_dfa' | 'lexer' | 'grammar'
   const [step, setStep] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
@@ -55,12 +55,7 @@ function App() {
   const getActiveStateId = () => {
     if (step < 0 || !trace[step]) return null;
     const currentAction = trace[step];
-    // Parser/Backend returns trace objects.
-    // For Regex (DFA), we need to extract "qX" from the action or stack info.
-    // Our backend parser.py might need to be checked, but usually returns 'stack_content' like "[q0]"
-
     const stackContent = currentAction.data?.stack_content || "";
-    // content is like "[q0]"
     const match = stackContent.match(/q(\d+)/);
     if (match) {
       return match[1];
@@ -94,8 +89,10 @@ function App() {
         }
         if (data.graphs) {
           setGraphs(data.graphs);
-          // Auto switch to DFA view if available
-          if (data.graphs.dfa) setViewMode('dfa');
+          // Default view modes based on analysis type
+          if (mode === 1) setViewMode('nfa'); // Regular Lang -> NFA
+          else if (mode === 3) setViewMode('pda'); // Context-Free -> PDA
+
           fetchHistory(); // Refresh history list
         }
       }
@@ -111,6 +108,10 @@ function App() {
     return trace.slice(0, step + 1).filter(t => t.type === 'stack');
   };
 
+  const getTokens = () => {
+    return trace.filter(t => t.type === 'token');
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-slate-100 font-sans selection:bg-sky-500/30 selection:text-sky-200">
 
@@ -122,7 +123,7 @@ function App() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">Automata Visualizer</h1>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Engineering Toolkit</p>
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Formal Language Hierarchy</p>
           </div>
         </div>
 
@@ -132,13 +133,13 @@ function App() {
             onClick={() => setMode(1)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${mode === 1 ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
           >
-            Regex Analysis
+            Lexical Analysis (Regular)
           </button>
           <button
             onClick={() => setMode(3)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${mode === 3 ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
           >
-            Calculator (PDA)
+            Syntactic Analysis (Context-Free)
           </button>
         </div>
       </nav>
@@ -153,7 +154,7 @@ function App() {
             <div className="flex gap-6 items-start">
               <div className="flex-1 space-y-2">
                 <label className="text-xs font-semibold text-sky-500 uppercase tracking-wider">
-                  {mode === 1 ? 'Regular Expression' : 'Input Expression'}
+                  {mode === 1 ? 'Regular Expression (Pattern)' : 'Source Code (Input)'}
                 </label>
                 <div className="relative group/input">
                   <input
@@ -195,7 +196,7 @@ function App() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>Processing</span>
+                      <span>Compiling</span>
                     </>
                   ) : (
                     <>
@@ -240,32 +241,32 @@ function App() {
                   <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/50"></div>
                   <div className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/50"></div>
                 </div>
-                <span className="text-xs font-mono text-slate-400 ml-3">visualizer.out</span>
+                <span className="text-xs font-mono text-slate-400 ml-3">
+                  {viewMode === 'trace' ? 'Trace Table' : viewMode === 'lexer' ? 'Lexical Tokens' : viewMode.toUpperCase()}
+                </span>
               </div>
 
               {/* Graph Controls */}
               <div className="flex bg-[#050505] p-0.5 rounded-lg border border-white/5">
-                {[
-                  { id: 'trace', label: 'TRACE' },
-                  ...(graphs.nfa ? [{ id: 'nfa', label: 'NFA' }] : []),
-                  ...(graphs.dfa ? [{ id: 'dfa', label: 'DFA' }] : []),
-                  ...(graphs.min_dfa ? [{ id: 'min_dfa', label: 'MIN-DFA' }] : []),
-                  ...(graphs.pda ? [{ id: 'pda', label: 'PDA' }] : []),
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setViewMode(tab.id)}
-                    className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === tab.id ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                {/* Common Tabs */}
+                <button onClick={() => setViewMode('trace')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'trace' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>TRACE</button>
+
+                {/* Lexical Tabs */}
+                {mode === 1 && graphs.nfa && <button onClick={() => setViewMode('nfa')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'nfa' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>NFA</button>}
+                {mode === 1 && graphs.dfa && <button onClick={() => setViewMode('dfa')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'dfa' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>DFA</button>}
+                {mode === 1 && graphs.min_dfa && <button onClick={() => setViewMode('min_dfa')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'min_dfa' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>MIN-DFA</button>}
+
+                {/* Syntax Tabs */}
+                {mode === 3 && <button onClick={() => setViewMode('lexer')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'lexer' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>TOKENS</button>}
+                {mode === 3 && graphs.pda && <button onClick={() => setViewMode('pda')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'pda' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>PDA</button>}
+                {mode === 3 && <button onClick={() => setViewMode('grammar')} className={`px-3 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${viewMode === 'grammar' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>GRAMMAR</button>}
               </div>
             </div>
 
             {/* Viewer Area */}
             <div className="flex-1 bg-[#050505] relative overflow-hidden flex flex-col">
               <div className="flex-1 relative overflow-auto">
+                {/* View Logic */}
                 {viewMode === 'trace' ? (
                   <div className="p-4 space-y-1 font-mono text-sm max-h-full">
                     {trace.length > 0 ? (
@@ -289,6 +290,31 @@ function App() {
                         <p className="text-lg font-light tracking-wide">// No trace data available</p>
                       </div>
                     )}
+                  </div>
+                ) : viewMode === 'lexer' ? (
+                  <div className="p-8">
+                    <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Lexical Analysis Token Stream</h3>
+                    <div className="flex flex-wrap gap-4">
+                      {getTokens().map((t, i) => (
+                        <div key={i} className="bg-slate-900 border border-white/10 rounded-xl p-4 min-w-[120px] flex flex-col items-center justify-center shadow-lg group hover:border-sky-500/50 transition-colors">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">{t.data.token_type}</div>
+                          <div className="font-mono text-xl text-sky-400 font-bold">{t.data.value}</div>
+                          <div className="mt-2 text-[10px] text-slate-600">ID: {t.data.id}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {getTokens().length === 0 && <p className="text-slate-600 italic">No tokens parsed yet.</p>}
+                  </div>
+                ) : viewMode === 'grammar' ? (
+                  <div className="p-8 font-mono">
+                    <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Context-Free Grammar (CFG)</h3>
+                    <div className="bg-slate-900/50 p-6 rounded-xl border border-white/5 text-slate-300 space-y-2">
+                      <p><span className="text-sky-400">E</span> -> <span className="text-indigo-400">T</span> <span className="text-emerald-400">E'</span></p>
+                      <p><span className="text-emerald-400">E'</span> -> + <span className="text-indigo-400">T</span> <span className="text-emerald-400">E'</span> | - <span className="text-indigo-400">T</span> <span className="text-emerald-400">E'</span> | ε</p>
+                      <p><span className="text-indigo-400">T</span> -> <span className="text-amber-400">F</span> <span className="text-pink-400">T'</span></p>
+                      <p><span className="text-pink-400">T'</span> -> * <span className="text-amber-400">F</span> <span className="text-pink-400">T'</span> | / <span className="text-amber-400">F</span> <span className="text-pink-400">T'</span> | ε</p>
+                      <p><span className="text-amber-400">F</span> -> ( <span className="text-sky-400">E</span> ) | id | num</p>
+                    </div>
                   </div>
                 ) : (
                   <GraphVisualizer
@@ -363,7 +389,7 @@ function App() {
                   >
                     <div className="flex justify-between items-center mb-1">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wider ${item.mode === 1 ? 'bg-sky-500/10 text-sky-400' : 'bg-indigo-500/10 text-indigo-400'}`}>
-                        {item.mode === 1 ? 'REGEX' : 'PDA'}
+                        {item.mode === 1 ? 'REGEX' : 'Syntactic'}
                       </span>
                       <span className="text-[10px] text-slate-600 group-hover:text-slate-500">{new Date(item.created_at).toLocaleTimeString()}</span>
                     </div>
