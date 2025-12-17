@@ -1,5 +1,9 @@
 #include "NFA.h"
+#include <algorithm>
 #include <fstream>
+#include <map>
+#include <vector>
+
 
 NFA NFA::fromChar(char c, int &stateCounter) {
   NFA nfa;

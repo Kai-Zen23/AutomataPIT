@@ -2,7 +2,10 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <queue>
+#include <vector>
+
 
 std::set<State *> DFA::epsilonClosure(std::set<State *> states) {
   std::set<State *> closure = states;
